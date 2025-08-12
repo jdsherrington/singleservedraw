@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Item Distributor - Get</title>
+    <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  </head>
+  <body>
+    <h1>Item Distributor</h1>
+    <div id="content">
+      <button id="getItem">Get Item</button>
+    </div>
+
+    <script>
+      const supabase = supabase.createClient(
+        "https://bwkdtnbjefmphmrtftup.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3a2R0bmJqZWZtcGhtcnRmdHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMDM1OTQsImV4cCI6MjA3MDU3OTU5NH0.K8w87ZaKcO3EyP6ppzGXLBIqgZcIaB4dL2S0zVmS1Cg",
+      );
+
+      const params = new URLSearchParams(window.location.search);
+      const setId = params.get("id");
+
+      const cookieKey = `item_${setId}`;
+      const savedItem = localStorage.getItem(cookieKey);
+
+      if (savedItem) {
+        showItem(savedItem);
+      }
+
+      document
+        .getElementById("getItem")
+        ?.addEventListener("click", async () => {
+          if (localStorage.getItem(cookieKey)) return;
+
+          // Fetch set
+          const { data: setData, error: setError } = await supabase
+            .from("item_sets")
+            .select("items")
+            .eq("id", setId)
+            .single();
+
+          if (setError) {
+            alert(setError.message);
+            return;
+          }
+
+          // Fetch assigned items
+          const { data: assignedData } = await supabase
+            .from("assigned_items")
+            .select("item")
+            .eq("set_id", setId);
+
+          const assignedItems = assignedData.map((a) => a.item);
+          const available = setData.items.filter(
+            (p) => !assignedItems.includes(p),
+          );
+
+          if (available.length === 0) {
+            alert("No items left!");
+            return;
+          }
+
+          const randomItem =
+            available[Math.floor(Math.random() * available.length)];
+
+          // Save assignment
+          await supabase
+            .from("assigned_items")
+            .insert([{ set_id: setId, item: randomItem }]);
+
+          localStorage.setItem(cookieKey, randomItem);
+          showItem(randomItem);
+        });
+
+      function showItem(item) {
+        document.getElementById("content").innerHTML = `
+          <input type="text" id="itemText" value="${item}" readonly />
+          <button onclick="copyItem()">Copy to Clipboard</button>
+        `;
+      }
+
+      function copyItem() {
+        const text = document.getElementById("itemText");
+        text.select();
+        document.execCommand("copy");
+        alert("Copied!");
+      }
+    </script>
+  </body>
+</html>

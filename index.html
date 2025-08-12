@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Item Distributor - Create</title>
+    <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  </head>
+  <body>
+    <h1>Create Item Set</h1>
+    <textarea
+      id="items"
+      rows="10"
+      cols="50"
+      placeholder="One item per line"
+    ></textarea
+    ><br />
+    <button id="generate">Generate Link</button>
+    <p id="link"></p>
+
+    <script>
+      const supabase = supabase.createClient(
+        "https://bwkdtnbjefmphmrtftup.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3a2R0bmJqZWZtcGhtcnRmdHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMDM1OTQsImV4cCI6MjA3MDU3OTU5NH0.K8w87ZaKcO3EyP6ppzGXLBIqgZcIaB4dL2S0zVmS1Cg",
+      );
+
+      document
+        .getElementById("generate")
+        .addEventListener("click", async () => {
+          const lines = document
+            .getElementById("items")
+            .value.split("\n")
+            .map((l) => l.trim())
+            .filter((l) => l);
+
+          if (!lines.length) {
+            alert("Please enter at least one item.");
+            return;
+          }
+
+          const { data, error } = await supabase
+            .from("item_sets")
+            .insert([{ items: lines }])
+            .select()
+            .single();
+
+          if (error) {
+            alert(error.message);
+            return;
+          }
+
+          const link = `${window.location.origin}/set.html?id=${data.id}`;
+          document.getElementById("link").innerHTML =
+            `<a href="${link}">${link}</a>`;
+        });
+    </script>
+  </body>
+</html>
