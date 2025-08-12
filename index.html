@@ -2,10 +2,11 @@
 <html>
   <head>
     <title>Item Distributor - Create</title>
+    <link rel="stylesheet" href="style.css" />
     <script src="https://unpkg.com/@supabase/supabase-js"></script>
   </head>
   <body>
-    <h1>Create Item Set</h1>
+    <p>Enter a list of items — each visitor gets one at random.</p>
     <textarea
       id="items"
       rows="10"
@@ -15,6 +16,7 @@
     ><br />
     <button id="generate">Generate Link</button>
     <p id="link"></p>
+    <span id="author">Created by JDSherrington</span>
 
     <script>
       const client = window.supabase.createClient(
@@ -36,18 +38,34 @@
             return;
           }
 
-          const { data, error } = await client
+          // 1. Create set
+          const { data: setData, error: setError } = await client
             .from("item_sets")
-            .insert([{ items: lines }])
+            .insert([{}])
             .select()
             .single();
 
-          if (error) {
-            alert(error.message);
+          if (setError) {
+            alert(setError.message);
             return;
           }
 
-          const link = `${window.location.origin}/set.html?id=${data.id}`;
+          // 2. Insert items
+          const itemsToInsert = lines.map((value) => ({
+            set_id: setData.id,
+            value,
+          }));
+
+          const { error: itemsError } = await client
+            .from("items")
+            .insert(itemsToInsert);
+
+          if (itemsError) {
+            alert(itemsError.message);
+            return;
+          }
+
+          const link = `${window.location.origin}/set.html?id=${setData.id}`;
           document.getElementById("link").innerHTML =
             `<a href="${link}">${link}</a>`;
         });

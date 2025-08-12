@@ -2,24 +2,22 @@
 <html>
   <head>
     <title>Item Distributor - Get</title>
+    <link rel="stylesheet" href="style.css" />
     <script src="https://unpkg.com/@supabase/supabase-js"></script>
   </head>
   <body>
-    <h1>Item Distributor</h1>
-    <div id="content">
-      <button id="getItem">Get Item</button>
+    <div class="container center">
+      <div id="content">
+        <button id="getItem">Get Your Prompt</button>
+      </div>
+      <span id="author">Created by JDSherrington</span>
     </div>
-
     <script>
-      const client = window.supabase.createClient(
-        "https://bwkdtnbjefmphmrtftup.supabase.co",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3a2R0bmJqZWZtcGhtcnRmdHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMDM1OTQsImV4cCI6MjA3MDU3OTU5NH0.K8w87ZaKcO3EyP6ppzGXLBIqgZcIaB4dL2S0zVmS1Cg",
-      );
-
       const params = new URLSearchParams(window.location.search);
       const setId = params.get("id");
 
       const cookieKey = `item_${setId}`;
+      `…`;
       const savedItem = localStorage.getItem(cookieKey);
 
       if (savedItem) {
@@ -31,48 +29,29 @@
         ?.addEventListener("click", async () => {
           if (localStorage.getItem(cookieKey)) return;
 
-          // Fetch set
-          const { data: setData, error: setError } = await client
-            .from("item_sets")
-            .select("items")
-            .eq("id", setId)
-            .single();
-
-          if (setError) {
-            alert(setError.message);
-            return;
-          }
-
-          // Fetch assigned items
-          const { data: assignedData } = await client
-            .from("assigned_items")
-            .select("item")
-            .eq("set_id", setId);
-
-          const assignedItems = assignedData.map((a) => a.item);
-          const available = setData.items.filter(
-            (p) => !assignedItems.includes(p),
+          const res = await fetch(
+            "https://bwkdtnbjefmphmrtftup.supabase.co/functions/v1/get-random-item",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ set_id: setId }),
+            },
           );
 
-          if (available.length === 0) {
-            alert("No items left!");
+          const data = await res.json();
+
+          if (data.error) {
+            alert(data.error);
             return;
           }
 
-          const randomItem =
-            available[Math.floor(Math.random() * available.length)];
-
-          // Save assignment
-          await client
-            .from("assigned_items")
-            .insert([{ set_id: setId, item: randomItem }]);
-
-          localStorage.setItem(cookieKey, randomItem);
-          showItem(randomItem);
+          localStorage.setItem(cookieKey, data.item);
+          showItem(data.item);
         });
 
       function showItem(item) {
         document.getElementById("content").innerHTML = `
+			<span>Your prompt:</span>
           <input type="text" id="itemText" value="${item}" readonly />
           <button onclick="copyItem()">Copy to Clipboard</button>
         `;
@@ -82,7 +61,6 @@
         const text = document.getElementById("itemText");
         text.select();
         document.execCommand("copy");
-        alert("Copied!");
       }
     </script>
   </body>
